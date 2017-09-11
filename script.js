@@ -6,6 +6,7 @@ const argv = require('minimist')(process.argv.slice(2));
   const browser = await puppeteer.launch();
   const page = await browser.newPage();
 
+  //dpi to ViewPort 계산
   const dpi = 300.0, dpcm = dpi/2.54;
   const widthCm = 21.0, heightCm = 29.7; // a4
   const viewPort = {width: Math.round(widthCm * dpcm), height: Math.round(heightCm * dpcm)};
@@ -23,20 +24,26 @@ const argv = require('minimist')(process.argv.slice(2));
     screenMode = 'screen';
   }
 
-  await page.goto(`${url}${outputId}`, {waitUntil: 'load'});
-  await page.setViewport(viewPort);
+  try {
+    await page.goto(`${url}${outputId}`, {waitUntil: 'load', timeout:1000*60*30});
+    await page.setViewport(viewPort);
 
-  // Get the "viewport" of the page, as reported by the page.
-  const dimensions = await page.evaluate(() => {
-    return {
-      width: document.documentElement.clientWidth,
-      height: document.documentElement.clientHeight,
-      deviceScaleFactor: window.devicePixelRatio
-    };
-  });
-  await page.emulateMedia(screenMode);
+    // Get the "viewport" of the page, as reported by the page.
+    const dimensions = await page.evaluate(() => {
+      return {
+        width: document.documentElement.clientWidth,
+        height: document.documentElement.clientHeight,
+        deviceScaleFactor: window.devicePixelRatio
+      };
+    });
+    await page.emulateMedia(screenMode);
 
-  await page.pdf({path: `${filePath}${fileName}.pdf`, format: 'A4', printBackground: true});
-  console.log('Dimensions:', dimensions);
-  browser.close();
+    //File SavePath 필요함
+    await page.pdf({path: `${filePath}${fileName}.pdf`, format: 'A4', printBackground: true});
+    console.log('Dimensions:', dimensions);
+  } catch (e) {
+    console.log('ERROR: ', e);
+  } finally {
+    browser.close();
+  }
 })();
